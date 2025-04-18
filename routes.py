@@ -107,8 +107,15 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Instead of redirecting to login, redirect to face registration
-        flash('Your account has been created! Let\'s register your face for attendance', 'success')
+        # For the combined registration approach, we'll still use the register_face_data endpoint
+        # but we need to return the user_id here for the JavaScript to use
+        flash('Your account details have been registered! Now let\'s capture your face.', 'success')
+        
+        # Return successfully created - The AJAX in register.html will send the face data separately
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'user_id': user.id})
+        
+        # For standard form submissions, redirect to the face registration page
         return redirect(url_for('register_face', user_id=user.id))
     
     return render_template('register.html', form=form)

@@ -26,6 +26,69 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+        }
+        
+        .camera-feed {
+            width: 100%;
+            display: block;
+        }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            padding: 1rem;
+            font-weight: 500;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            background-color: transparent;
+            border-bottom: 3px solid #0d6efd;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            border-color: transparent;
+            color: #0d6efd;
+        }
+    </style>
 </head>
 <body>
     <!-- Toast container for notifications -->
@@ -126,79 +189,165 @@
             <div class="container-fluid">
                 <div class="container mt-5">
                     <div class="row justify-content-center">
-                        <div class="col-md-6 col-lg-5">
-                            <div class="card shadow-sm">
+                        <div class="col-lg-8">
+                            <div class="card shadow">
                                 <div class="card-header bg-primary text-white text-center py-3">
                                     <h4 class="mb-0">Create Account</h4>
                                 </div>
+                                
                                 <div class="card-body p-4">
-                                    <form method="POST" action="">
-                                        {{ form.hidden_tag() }}
-                                        
-                                        <div class="form-group mb-3">
-                                            <label for="username" class="form-label">Username</label>
-                                            {% if form.username.errors %}
-                                                {{ form.username(class="form-control is-invalid") }}
-                                                <div class="invalid-feedback">
-                                                    {% for error in form.username.errors %}
-                                                        {{ error }}
-                                                    {% endfor %}
+                                    <!-- Registration form tabs -->
+                                    <ul class="nav nav-tabs mb-4" id="registerTabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="account-tab" data-bs-toggle="tab" data-bs-target="#account-data" type="button" role="tab" aria-controls="account-data" aria-selected="true">
+                                                <i class="fas fa-user me-2"></i> Account Details
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="face-tab" data-bs-toggle="tab" data-bs-target="#face-data" type="button" role="tab" aria-controls="face-data" aria-selected="false">
+                                                <i class="fas fa-camera me-2"></i> Face Recognition
+                                            </button>
+                                        </li>
+                                    </ul>
+                                    
+                                    <div class="tab-content" id="registerTabsContent">
+                                        <!-- Account Details Tab -->
+                                        <div class="tab-pane fade show active" id="account-data" role="tabpanel" aria-labelledby="account-tab">
+                                            <form id="account-form" method="POST" action="">
+                                                {{ form.hidden_tag() }}
+                                                
+                                                <div class="form-group mb-3">
+                                                    <label for="username" class="form-label">Username</label>
+                                                    {% if form.username.errors %}
+                                                        {{ form.username(class="form-control is-invalid") }}
+                                                        <div class="invalid-feedback">
+                                                            {% for error in form.username.errors %}
+                                                                {{ error }}
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        {{ form.username(class="form-control", placeholder="Choose a username") }}
+                                                    {% endif %}
                                                 </div>
-                                            {% else %}
-                                                {{ form.username(class="form-control", placeholder="Choose a username") }}
-                                            {% endif %}
+                                                
+                                                <div class="form-group mb-3">
+                                                    <label for="email" class="form-label">Email</label>
+                                                    {% if form.email.errors %}
+                                                        {{ form.email(class="form-control is-invalid") }}
+                                                        <div class="invalid-feedback">
+                                                            {% for error in form.email.errors %}
+                                                                {{ error }}
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        {{ form.email(class="form-control", placeholder="Enter your email") }}
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                <div class="form-group mb-3">
+                                                    <label for="password" class="form-label">Password</label>
+                                                    {% if form.password.errors %}
+                                                        {{ form.password(class="form-control is-invalid") }}
+                                                        <div class="invalid-feedback">
+                                                            {% for error in form.password.errors %}
+                                                                {{ error }}
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        {{ form.password(class="form-control", placeholder="Choose a password") }}
+                                                    {% endif %}
+                                                    <div class="form-text text-muted">
+                                                        Password must be at least 6 characters long
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="form-group mb-4">
+                                                    <label for="confirm_password" class="form-label">Confirm Password</label>
+                                                    {% if form.confirm_password.errors %}
+                                                        {{ form.confirm_password(class="form-control is-invalid") }}
+                                                        <div class="invalid-feedback">
+                                                            {% for error in form.confirm_password.errors %}
+                                                                {{ error }}
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        {{ form.confirm_password(class="form-control", placeholder="Confirm your password") }}
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                <div class="d-flex justify-content-between mt-4">
+                                                    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('login') }}'">
+                                                        <i class="fas fa-arrow-left me-2"></i> Back to Login
+                                                    </button>
+                                                    <button type="button" class="btn btn-primary" id="next-to-face-btn">
+                                                        Continue <i class="fas fa-arrow-right ms-2"></i>
+                                                    </button>
+                                                </div>
+                                            </form>
                                         </div>
                                         
-                                        <div class="form-group mb-3">
-                                            <label for="email" class="form-label">Email</label>
-                                            {% if form.email.errors %}
-                                                {{ form.email(class="form-control is-invalid") }}
-                                                <div class="invalid-feedback">
-                                                    {% for error in form.email.errors %}
-                                                        {{ error }}
-                                                    {% endfor %}
+                                        <!-- Face Recognition Tab -->
+                                        <div class="tab-pane fade" id="face-data" role="tabpanel" aria-labelledby="face-tab">
+                                            <div class="text-center mb-4">
+                                                <h5>Register Your Face</h5>
+                                                <p class="text-muted">Your face will be used for attendance and login verification</p>
+                                            </div>
+                                            
+                                            <div class="camera-container mb-4">
+                                                <video id="camera-video" class="camera-feed" autoplay></video>
+                                                <canvas id="camera-canvas" style="display: none;"></canvas>
+                                                <div class="camera-overlay" id="camera-overlay" style="display: none;">
+                                                    <div class="text-center">
+                                                        <div class="loading-spinner mb-3"></div>
+                                                        <p>Processing...</p>
+                                                    </div>
                                                 </div>
-                                            {% else %}
-                                                {{ form.email(class="form-control", placeholder="Enter your email") }}
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <div class="form-group mb-3">
-                                            <label for="password" class="form-label">Password</label>
-                                            {% if form.password.errors %}
-                                                {{ form.password(class="form-control is-invalid") }}
-                                                <div class="invalid-feedback">
-                                                    {% for error in form.password.errors %}
-                                                        {{ error }}
-                                                    {% endfor %}
+                                            </div>
+                                            
+                                            <div class="camera-buttons d-flex gap-2 justify-content-center mb-4">
+                                                <button class="btn btn-secondary" id="start-camera">
+                                                    <i class="fas fa-video me-2"></i> Start Camera
+                                                </button>
+                                                <button class="btn btn-danger" id="stop-camera" style="display: none;">
+                                                    <i class="fas fa-video-slash me-2"></i> Stop Camera
+                                                </button>
+                                                <button class="btn btn-primary" id="capture-face" style="display: none;">
+                                                    <i class="fas fa-camera me-2"></i> Capture Face
+                                                </button>
+                                            </div>
+                                            
+                                            <div id="face-preview" class="text-center" style="display: none;">
+                                                <h5 class="mb-3">Captured Image</h5>
+                                                <img id="captured-image" src="" alt="Captured face" class="img-thumbnail mb-3" style="max-height: 200px;">
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <button class="btn btn-secondary" id="retake-photo">
+                                                        <i class="fas fa-redo me-2"></i> Retake
+                                                    </button>
                                                 </div>
-                                            {% else %}
-                                                {{ form.password(class="form-control", placeholder="Choose a password") }}
-                                            {% endif %}
-                                            <div class="form-text text-muted">
-                                                Password must be at least 6 characters long
+                                            </div>
+                                            
+                                            <div class="alert alert-info mt-4">
+                                                <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i> Tips for Better Face Recognition</h6>
+                                                <ul class="mb-0 small">
+                                                    <li>Ensure your face is well-lit and clearly visible</li>
+                                                    <li>Look directly at the camera</li>
+                                                    <li>Remove glasses, hats, or other face-covering items</li>
+                                                    <li>Maintain a neutral expression</li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <div class="d-flex justify-content-between mt-4">
+                                                <button type="button" class="btn btn-secondary" id="back-to-account-btn">
+                                                    <i class="fas fa-arrow-left me-2"></i> Back
+                                                </button>
+                                                <button type="button" class="btn btn-success" id="complete-registration-btn">
+                                                    <i class="fas fa-check me-2"></i> Complete Registration
+                                                </button>
                                             </div>
                                         </div>
-                                        
-                                        <div class="form-group mb-4">
-                                            <label for="confirm_password" class="form-label">Confirm Password</label>
-                                            {% if form.confirm_password.errors %}
-                                                {{ form.confirm_password(class="form-control is-invalid") }}
-                                                <div class="invalid-feedback">
-                                                    {% for error in form.confirm_password.errors %}
-                                                        {{ error }}
-                                                    {% endfor %}
-                                                </div>
-                                            {% else %}
-                                                {{ form.confirm_password(class="form-control", placeholder="Confirm your password") }}
-                                            {% endif %}
-                                        </div>
-                                        
-                                        <div class="d-grid gap-2">
-                                            {{ form.submit(class="btn btn-primary btn-lg") }}
-                                        </div>
-                                    </form>
+                                    </div>
                                 </div>
+                                
                                 <div class="card-footer text-center py-3">
                                     <div class="small">
                                         Already have an account? <a href="{{ url_for('login') }}">Login here</a>
@@ -227,5 +376,261 @@
     
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const accountTab = document.getElementById('account-tab');
+            const faceTab = document.getElementById('face-tab');
+            const accountData = document.getElementById('account-data');
+            const faceData = document.getElementById('face-data');
+            const nextToFaceBtn = document.getElementById('next-to-face-btn');
+            const backToAccountBtn = document.getElementById('back-to-account-btn');
+            const completeRegistrationBtn = document.getElementById('complete-registration-btn');
+            
+            // Camera elements
+            const videoElement = document.getElementById('camera-video');
+            const canvasElement = document.getElementById('camera-canvas');
+            const overlayElement = document.getElementById('camera-overlay');
+            const capturedImage = document.getElementById('captured-image');
+            const facePreview = document.getElementById('face-preview');
+            
+            // Camera control buttons
+            const startCameraBtn = document.getElementById('start-camera');
+            const stopCameraBtn = document.getElementById('stop-camera');
+            const captureFaceBtn = document.getElementById('capture-face');
+            const retakePhotoBtn = document.getElementById('retake-photo');
+            
+            // Form element
+            const accountForm = document.getElementById('account-form');
+            
+            // Validation and form data
+            let formData = {};
+            let isFaceCaptured = false;
+            let stream = null;
+            
+            // Tab navigation
+            nextToFaceBtn.addEventListener('click', function() {
+                // Get form data
+                formData.username = document.getElementById('username').value.trim();
+                formData.email = document.getElementById('email').value.trim();
+                formData.password = document.getElementById('password').value;
+                formData.confirm_password = document.getElementById('confirm_password').value;
+                
+                // Simple validation
+                if (!formData.username) {
+                    showToast('Please enter a username', 'danger');
+                    return;
+                }
+                
+                if (!formData.email) {
+                    showToast('Please enter an email address', 'danger');
+                    return;
+                }
+                
+                if (!formData.password) {
+                    showToast('Please enter a password', 'danger');
+                    return;
+                }
+                
+                if (formData.password.length < 6) {
+                    showToast('Password must be at least 6 characters long', 'danger');
+                    return;
+                }
+                
+                if (formData.password !== formData.confirm_password) {
+                    showToast('Passwords do not match', 'danger');
+                    return;
+                }
+                
+                // Switch to face tab
+                bootstrap.Tab.getInstance(faceTab).show();
+            });
+            
+            backToAccountBtn.addEventListener('click', function() {
+                bootstrap.Tab.getInstance(accountTab).show();
+            });
+            
+            // Start camera
+            startCameraBtn.addEventListener('click', async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    });
+                    
+                    videoElement.srcObject = stream;
+                    startCameraBtn.style.display = 'none';
+                    stopCameraBtn.style.display = 'inline-block';
+                    captureFaceBtn.style.display = 'inline-block';
+                    facePreview.style.display = 'none';
+                    
+                    showToast('Camera started successfully', 'success');
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    showToast('Could not access your camera. Please check permissions.', 'danger');
+                }
+            });
+            
+            // Stop camera
+            stopCameraBtn.addEventListener('click', () => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    videoElement.srcObject = null;
+                    startCameraBtn.style.display = 'inline-block';
+                    stopCameraBtn.style.display = 'none';
+                    captureFaceBtn.style.display = 'none';
+                }
+            });
+            
+            // Capture face
+            captureFaceBtn.addEventListener('click', () => {
+                // Set canvas dimensions to match video
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+                
+                // Draw video frame to canvas
+                const context = canvasElement.getContext('2d');
+                context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                
+                // Convert canvas to data URL (base64)
+                const imageData = canvasElement.toDataURL('image/jpeg');
+                capturedImage.src = imageData;
+                
+                // Show preview and hide camera controls
+                facePreview.style.display = 'block';
+                captureFaceBtn.style.display = 'none';
+                
+                isFaceCaptured = true;
+            });
+            
+            // Retake photo
+            retakePhotoBtn.addEventListener('click', () => {
+                facePreview.style.display = 'none';
+                captureFaceBtn.style.display = 'inline-block';
+                isFaceCaptured = false;
+            });
+            
+            // Complete registration
+            completeRegistrationBtn.addEventListener('click', async () => {
+                // Make sure we have all required data
+                if (!formData.username || !formData.email || !formData.password) {
+                    showToast('Please fill out all required account information', 'danger');
+                    bootstrap.Tab.getInstance(accountTab).show();
+                    return;
+                }
+                
+                if (!isFaceCaptured) {
+                    showToast('Please capture your face before completing registration', 'danger');
+                    return;
+                }
+                
+                try {
+                    overlayElement.style.display = 'flex';
+                    
+                    // First, create the user account
+                    const accountFormData = new FormData(accountForm);
+                    const accountResponse = await fetch('/register', {
+                        method: 'POST',
+                        body: accountFormData
+                    });
+                    
+                    // Parse the response HTML to check for errors
+                    const accountResponseText = await accountResponse.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(accountResponseText, 'text/html');
+                    const errorElements = doc.querySelectorAll('.invalid-feedback');
+                    
+                    if (errorElements.length > 0) {
+                        // There are validation errors in the form
+                        let errorMessages = [];
+                        errorElements.forEach(el => {
+                            if (el.textContent) {
+                                errorMessages.push(el.textContent.trim());
+                            }
+                        });
+                        
+                        showToast('Please correct the form errors: ' + errorMessages.join(', '), 'danger');
+                        bootstrap.Tab.getInstance(accountTab).show();
+                        overlayElement.style.display = 'none';
+                        return;
+                    }
+                    
+                    // If we're being redirected, we need to find the user_id from the response
+                    const userIdMatch = accountResponseText.match(/register_face\/(\d+)/);
+                    if (!userIdMatch) {
+                        // Something went wrong, show the account tab again
+                        showToast('Unable to create account. Please try again.', 'danger');
+                        bootstrap.Tab.getInstance(accountTab).show();
+                        overlayElement.style.display = 'none';
+                        return;
+                    }
+                    
+                    const userId = userIdMatch[1];
+                    
+                    // Now register the face
+                    const imageData = canvasElement.toDataURL('image/jpeg')
+                        .replace('data:image/jpeg;base64,', '');
+                    
+                    const faceResponse = await fetch('/register_face_data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image_data: imageData,
+                            user_id: parseInt(userId)
+                        }),
+                    });
+                    
+                    const faceResult = await faceResponse.json();
+                    
+                    if (faceResult.success) {
+                        showToast('Registration successful! Redirecting to dashboard...', 'success');
+                        // Redirect to dashboard
+                        setTimeout(() => {
+                            window.location.href = '/dashboard';
+                        }, 1500);
+                    } else {
+                        showToast(faceResult.error || 'Failed to register face. Please try again.', 'danger');
+                        overlayElement.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error during registration:', error);
+                    showToast('An error occurred during registration. Please try again.', 'danger');
+                    overlayElement.style.display = 'none';
+                }
+            });
+            
+            // Helper for showing toast notifications
+            function showToast(message, type = 'info') {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-white bg-${type} border-0`;
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+                
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                `;
+                
+                toastContainer.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+                bsToast.show();
+                
+                // Remove toast from DOM after it's hidden
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toastContainer.removeChild(toast);
+                });
+            }
+        });
+    </script>
 </body>
 </html>
