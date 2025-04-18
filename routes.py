@@ -7,8 +7,6 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, s
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 import base64
-import numpy as np
-import cv2
 from app import app, db
 from models import User, Person, Attendance, Session, FaceData
 from forms import LoginForm, RegistrationForm, PersonForm, AttendanceForm, SessionForm, ReportForm

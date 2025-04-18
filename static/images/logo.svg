@@ -1,20 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background circle -->
   <circle cx="50" cy="50" r="45" fill="#4e73df" />
+  <circle cx="50" cy="50" r="40" fill="#ffffff" />
+  <circle cx="50" cy="50" r="35" fill="#4e73df" />
   
-  <!-- Face outline -->
-  <circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="2" />
+  <!-- Stylized camera lens -->
+  <circle cx="50" cy="50" r="20" fill="#ffffff" stroke="#4e73df" stroke-width="2" />
+  <circle cx="50" cy="50" r="15" fill="#ffffff" stroke="#4e73df" stroke-width="1" />
+  <circle cx="50" cy="50" r="10" fill="#4e73df" />
   
-  <!-- Eyes -->
-  <circle cx="40" cy="42" r="3" fill="white" />
-  <circle cx="60" cy="42" r="3" fill="white" />
+  <!-- Clock hands for time tracking -->
+  <line x1="50" y1="50" x2="50" y2="30" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+  <line x1="50" y1="50" x2="65" y2="50" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
   
-  <!-- Smile -->
-  <path d="M35,60 Q50,70 65,60" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" />
-  
-  <!-- Checkmark -->
-  <path d="M25,80 L40,95 L75,55" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
-  
-  <!-- Text -->
-  <text x="50" y="25" font-family="Arial" font-size="10" fill="white" text-anchor="middle" font-weight="bold">ATTENDANCE</text>
+  <!-- Small reflection -->
+  <circle cx="60" cy="40" r="3" fill="#ffffff" />
 </svg>

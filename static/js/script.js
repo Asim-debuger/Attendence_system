@@ -1,236 +1,233 @@
-// Main JavaScript for the Advanced Attendance System
-
-// Theme toggle functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Apply saved theme
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
+    // Initialize theme
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    updateThemeIcon(currentTheme);
     
-    // Theme toggle event listener
+    // Theme toggle
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
-        // Set initial icon based on current theme
-        updateThemeIcon(savedTheme);
-        
         themeToggle.addEventListener('click', function() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             
-            // Change theme
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            
-            // Update icon
             updateThemeIcon(newTheme);
         });
     }
     
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    
-    // Initialize popovers
-    const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-    popoverTriggerList.map(function (popoverTriggerEl) {
-        return new bootstrap.Popover(popoverTriggerEl);
-    });
-    
-    // Initialize datepickers
-    const datepickers = document.querySelectorAll('.datepicker');
-    datepickers.forEach(function(datepicker) {
-        if (typeof flatpickr !== 'undefined') {
-            flatpickr(datepicker, {
-                altInput: true,
-                altFormat: "F j, Y",
-                dateFormat: "Y-m-d",
-            });
-        }
-    });
-    
-    // Initialize tables with DataTables if available
-    const tables = document.querySelectorAll('.datatable');
-    tables.forEach(function(table) {
-        if (typeof $.fn.DataTable !== 'undefined') {
-            $(table).DataTable({
-                responsive: true
-            });
-        }
-    });
-    
-    // Initialize sidebar toggle for mobile
+    // Sidebar toggle
     const sidebarToggle = document.getElementById('sidebar-toggle');
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebarToggle && sidebar) {
+    if (sidebarToggle) {
         sidebarToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('show');
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
         });
     }
     
-    // Close alerts when the close button is clicked
-    document.querySelectorAll('.alert .close').forEach(function(close) {
-        close.addEventListener('click', function() {
-            this.parentElement.style.display = 'none';
+    // Initialize DataTables
+    if ($.fn.DataTable) {
+        $('.datatable').DataTable({
+            responsive: true,
+            language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries per page",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty: "Showing 0 to 0 of 0 entries",
+                infoFiltered: "(filtered from _MAX_ total entries)"
+            }
+        });
+    }
+    
+    // Flatpickr initialization for date inputs
+    if (typeof flatpickr !== 'undefined') {
+        flatpickr(".datepicker", {
+            altInput: true,
+            altFormat: "F j, Y",
+            dateFormat: "Y-m-d"
+        });
+    }
+    
+    // Auto-dismiss flash messages
+    const flashMessages = document.querySelectorAll('.alert:not(.alert-persistent)');
+    flashMessages.forEach(function(message) {
+        setTimeout(function() {
+            const alert = new bootstrap.Alert(message);
+            alert.close();
+        }, 5000);
+    });
+    
+    // Handle attendance marking buttons
+    const markAttendanceBtns = document.querySelectorAll('button[onclick^="markAttendance"]');
+    markAttendanceBtns.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const onclick = btn.getAttribute('onclick');
+            const params = onclick.match(/markAttendance\((\d+),\s*(\d+),\s*['"](\w+)['"]\)/);
+            
+            if (params && params.length === 4) {
+                markAttendance(parseInt(params[1]), parseInt(params[2]), params[3]);
+            }
+        });
+    });
+    
+    // Handle export buttons
+    const exportBtns = document.querySelectorAll('.export-btn');
+    exportBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const type = btn.getAttribute('data-type');
+            const tableData = document.getElementById('report-data-body');
+            
+            if (tableData && tableData.children.length > 0) {
+                const data = [];
+                const headers = ['Date', 'Roll/Employee ID', 'Name', 'Department', 'Status', 'Time In', 'Time Out'];
+                
+                // Add headers
+                data.push(headers);
+                
+                // Add rows
+                const rows = tableData.querySelectorAll('tr');
+                rows.forEach(function(row) {
+                    const rowData = [];
+                    const cells = row.querySelectorAll('td');
+                    cells.forEach(function(cell) {
+                        rowData.push(cell.textContent.trim());
+                    });
+                    data.push(rowData);
+                });
+                
+                exportReport(data, type);
+            }
         });
     });
 });
 
-// Helper function to update theme icon
+// Update theme icon based on current theme
 function updateThemeIcon(theme) {
-    const themeIcon = document.querySelector('#theme-toggle i');
-    if (themeIcon) {
-        if (theme === 'dark') {
-            themeIcon.classList.remove('fa-moon');
-            themeIcon.classList.add('fa-sun');
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        const icon = themeToggle.querySelector('i');
+        if (theme === 'light') {
+            icon.className = 'fas fa-moon';
         } else {
-            themeIcon.classList.remove('fa-sun');
-            themeIcon.classList.add('fa-moon');
+            icon.className = 'fas fa-sun';
         }
     }
 }
 
-// Helper function to show toast notifications
+// Show toast notification
 function showToast(message, type = 'info') {
     const toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        // Create toast container if it doesn't exist
-        const container = document.createElement('div');
-        container.id = 'toast-container';
-        container.className = 'position-fixed bottom-0 end-0 p-3';
-        container.style.zIndex = '1050';
-        document.body.appendChild(container);
-    }
+    if (!toastContainer) return;
     
-    // Create a unique ID for the toast
-    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.className = `toast bg-${type} text-white`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
     
-    // Create toast HTML
-    const toastHtml = `
-        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-${type}">
-                <strong class="me-auto text-white">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
-            </div>
-        </div>
-    `;
+    const toastBody = document.createElement('div');
+    toastBody.className = 'toast-body d-flex justify-content-between align-items-center';
     
-    // Append toast to container
-    document.getElementById('toast-container').innerHTML += toastHtml;
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
     
-    // Initialize and show the toast
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, {
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'btn-close btn-close-white ms-auto';
+    closeButton.setAttribute('data-bs-dismiss', 'toast');
+    closeButton.setAttribute('aria-label', 'Close');
+    
+    toastBody.appendChild(messageSpan);
+    toastBody.appendChild(closeButton);
+    toast.appendChild(toastBody);
+    toastContainer.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast, { 
         autohide: true,
         delay: 5000
     });
-    toast.show();
     
-    // Remove toast from DOM after it's hidden
-    toastElement.addEventListener('hidden.bs.toast', function () {
-        toastElement.remove();
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', function() {
+        toast.remove();
     });
 }
 
-// Function to format date for display
+// Format date for display
 function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
 }
 
-// Function to format time for display
+// Format time for display
 function formatTime(timeString) {
     if (!timeString) return '';
-    const options = { hour: '2-digit', minute: '2-digit' };
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString(undefined, options);
+    // Assuming timeString is in format HH:MM:SS
+    return timeString.substring(0, 5);
 }
 
-// Attendance marking function
+// Mark attendance via AJAX
 function markAttendance(personId, sessionId, status) {
-    // Show loading indicator
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-    btn.disabled = true;
-    
-    // Prepare form data
     const formData = new FormData();
     formData.append('person_id', personId);
     formData.append('session_id', sessionId);
     formData.append('status', status);
     
-    // Send request
     fetch('/mark_attendance', {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
     .then(data => {
-        // Reset button
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        
         if (data.success) {
+            // Update UI
+            const statusCell = document.getElementById(`status-${personId}`);
+            if (statusCell) {
+                // Remove all status classes
+                statusCell.classList.remove('status-present', 'status-absent', 'status-late');
+                // Add new status class
+                statusCell.classList.add(`status-${status}`);
+                // Update text
+                statusCell.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            }
+            
             // Show success message
             showToast('Attendance updated successfully', 'success');
-            
-            // Update UI to reflect new status
-            const statusCell = document.querySelector(`#status-${personId}`);
-            if (statusCell) {
-                statusCell.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-                
-                // Update status class
-                statusCell.className = '';
-                statusCell.classList.add(`status-${status}`);
-            }
         } else {
-            // Show error message
-            showToast('Error: ' + data.message, 'danger');
+            showToast(data.message || 'Failed to update attendance', 'danger');
         }
     })
     .catch(error => {
-        // Reset button
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        
-        // Show error message
-        showToast('Error: ' + error.message, 'danger');
+        console.error('Error:', error);
+        showToast('An error occurred while updating attendance', 'danger');
     });
 }
 
-// Export report to CSV
+// Export report data
 function exportReport(data, type = 'csv') {
-    fetch('/export_report', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            data: data,
-            type: type
-        })
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.blob();
-        }
-        throw new Error('Network response was not ok.');
-    })
-    .then(blob => {
-        // Create a link to download the file
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `attendance_report_${new Date().toISOString().split('T')[0]}.${type}`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-    })
-    .catch(error => {
-        showToast('Error exporting report: ' + error.message, 'danger');
-    });
+    if (!data || !data.length) return;
+    
+    if (type === 'csv') {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        data.forEach(function(row) {
+            let rowContent = row.join(',');
+            csvContent += rowContent + "\r\n";
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "attendance_report.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else if (type === 'pdf') {
+        // PDF export would require additional libraries like jsPDF
+        showToast('PDF export is not implemented yet', 'info');
+    }
 }

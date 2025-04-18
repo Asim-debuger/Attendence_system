@@ -1,20 +1,16 @@
-// WebCam handling for the Advanced Attendance System
-
 class WebcamHandler {
     constructor(videoElement, canvasElement) {
         this.videoElement = videoElement;
         this.canvasElement = canvasElement;
         this.stream = null;
-        this.isActive = false;
     }
     
-    // Start webcam
     async start() {
         try {
             const constraints = {
                 video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
                     facingMode: 'user'
                 }
             };
@@ -24,7 +20,6 @@ class WebcamHandler {
             
             return new Promise((resolve) => {
                 this.videoElement.onloadedmetadata = () => {
-                    this.isActive = true;
                     resolve(true);
                 };
             });
@@ -34,232 +29,271 @@ class WebcamHandler {
         }
     }
     
-    // Stop webcam
     stop() {
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
+            this.videoElement.srcObject = null;
             this.stream = null;
-            this.isActive = false;
         }
     }
     
-    // Take a snapshot and return as data URL
     takeSnapshot() {
-        if (!this.isActive) {
-            return null;
-        }
+        if (!this.stream) return null;
         
         const context = this.canvasElement.getContext('2d');
-        const { videoWidth, videoHeight } = this.videoElement;
+        this.canvasElement.width = this.videoElement.videoWidth;
+        this.canvasElement.height = this.videoElement.videoHeight;
         
-        // Set canvas dimensions to match video
-        this.canvasElement.width = videoWidth;
-        this.canvasElement.height = videoHeight;
-        
-        // Draw video frame to canvas
-        context.drawImage(this.videoElement, 0, 0, videoWidth, videoHeight);
-        
-        // Get image data URL
-        return this.canvasElement.toDataURL('image/jpeg');
+        context.drawImage(this.videoElement, 0, 0, this.canvasElement.width, this.canvasElement.height);
+        return this.canvasElement.toDataURL('image/png');
     }
     
-    // Convert data URL to Blob for upload
     dataURLtoBlob(dataURL) {
-        const parts = dataURL.split(';base64,');
-        const contentType = parts[0].split(':')[1];
-        const raw = window.atob(parts[1]);
-        const rawLength = raw.length;
-        const uInt8Array = new Uint8Array(rawLength);
+        const byteString = atob(dataURL.split(',')[1]);
+        const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
         
-        for (let i = 0; i < rawLength; ++i) {
-            uInt8Array[i] = raw.charCodeAt(i);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
         }
         
-        return new Blob([uInt8Array], { type: contentType });
+        return new Blob([ab], { type: mimeString });
     }
     
-    // Take snapshot and return as blob for upload
     captureForUpload() {
         const dataURL = this.takeSnapshot();
-        if (!dataURL) {
-            return null;
-        }
-        return this.dataURLtoBlob(dataURL);
+        if (!dataURL) return null;
+        
+        const blob = this.dataURLtoBlob(dataURL);
+        return blob;
     }
 }
 
-// Initialize webcam when DOM is loaded for camera pages
+// Initialize webcam functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if we're on a page that uses webcam
     const videoElement = document.getElementById('camera-video');
     const canvasElement = document.getElementById('camera-canvas');
-    const startButton = document.getElementById('start-camera');
-    const stopButton = document.getElementById('stop-camera');
-    const captureButton = document.getElementById('capture-image');
-    const uploadFaceButton = document.getElementById('upload-face');
-    const recognizeFaceButton = document.getElementById('recognize-face');
     
     if (videoElement && canvasElement) {
-        // Initialize webcam handler
         const webcam = new WebcamHandler(videoElement, canvasElement);
         
         // Start camera button
-        if (startButton) {
-            startButton.addEventListener('click', async () => {
+        const startCameraBtn = document.getElementById('start-camera');
+        if (startCameraBtn) {
+            startCameraBtn.addEventListener('click', async function() {
                 try {
                     await webcam.start();
-                    // Update UI
-                    startButton.style.display = 'none';
-                    if (stopButton) stopButton.style.display = 'inline-block';
-                    if (captureButton) captureButton.style.display = 'inline-block';
-                    if (uploadFaceButton) uploadFaceButton.style.display = 'inline-block';
-                    if (recognizeFaceButton) recognizeFaceButton.style.display = 'inline-block';
+                    
+                    // Show stop and capture buttons, hide start button
+                    document.getElementById('stop-camera').style.display = 'inline-block';
+                    const captureBtn = document.getElementById('upload-face') || document.getElementById('recognize-face');
+                    if (captureBtn) captureBtn.style.display = 'inline-block';
+                    startCameraBtn.style.display = 'none';
                 } catch (error) {
-                    showToast('Error starting camera: ' + error.message, 'danger');
+                    console.error('Failed to start camera:', error);
+                    alert('Could not access the camera. Please ensure you have granted camera permissions.');
                 }
             });
         }
         
         // Stop camera button
-        if (stopButton) {
-            stopButton.addEventListener('click', () => {
+        const stopCameraBtn = document.getElementById('stop-camera');
+        if (stopCameraBtn) {
+            stopCameraBtn.addEventListener('click', function() {
                 webcam.stop();
-                // Update UI
-                if (startButton) startButton.style.display = 'inline-block';
-                stopButton.style.display = 'none';
-                if (captureButton) captureButton.style.display = 'none';
-                if (uploadFaceButton) uploadFaceButton.style.display = 'none';
-                if (recognizeFaceButton) recognizeFaceButton.style.display = 'none';
-            });
-        }
-        
-        // Capture button
-        if (captureButton) {
-            captureButton.addEventListener('click', () => {
-                const snapshot = webcam.takeSnapshot();
-                const resultImage = document.getElementById('result-image');
-                if (resultImage && snapshot) {
-                    resultImage.src = snapshot;
-                    resultImage.style.display = 'block';
-                }
-            });
-        }
-        
-        // Upload face button
-        if (uploadFaceButton) {
-            uploadFaceButton.addEventListener('click', () => {
-                const personId = uploadFaceButton.getAttribute('data-person-id');
-                const blob = webcam.captureForUpload();
                 
-                if (!blob) {
-                    showToast('Please start the camera first', 'warning');
+                // Show start button, hide stop and capture buttons
+                document.getElementById('start-camera').style.display = 'inline-block';
+                stopCameraBtn.style.display = 'none';
+                const captureBtn = document.getElementById('upload-face') || document.getElementById('recognize-face');
+                if (captureBtn) captureBtn.style.display = 'none';
+            });
+        }
+        
+        // Upload face button (for registration)
+        const uploadFaceBtn = document.getElementById('upload-face');
+        if (uploadFaceBtn) {
+            uploadFaceBtn.addEventListener('click', function() {
+                const personId = uploadFaceBtn.getAttribute('data-person-id');
+                if (!personId) {
+                    alert('No person ID provided');
                     return;
                 }
                 
-                // Create form data for upload
+                const blob = webcam.captureForUpload();
+                if (!blob) {
+                    alert('Failed to capture image');
+                    return;
+                }
+                
                 const formData = new FormData();
-                formData.append('face_image', blob, 'face.jpg');
+                formData.append('face_image', blob, 'webcam.png');
                 
-                // Show loading indicator
-                uploadFaceButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
-                uploadFaceButton.disabled = true;
+                // Show loading overlay
+                document.getElementById('camera-overlay').style.display = 'flex';
                 
-                // Upload the face image
                 fetch(`/upload_face/${personId}`, {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
-                    uploadFaceButton.innerHTML = 'Upload Face';
-                    uploadFaceButton.disabled = false;
-                    
                     if (data.success) {
-                        showToast('Face uploaded successfully', 'success');
+                        // Update face status badge
+                        const faceStatus = document.getElementById('face-status');
+                        if (faceStatus) {
+                            faceStatus.className = 'badge bg-success';
+                            faceStatus.textContent = 'Registered';
+                        }
+                        
+                        alert('Face registered successfully!');
                     } else {
-                        showToast('Error: ' + data.message, 'danger');
+                        alert('Failed to register face: ' + data.message);
                     }
                 })
                 .catch(error => {
-                    uploadFaceButton.innerHTML = 'Upload Face';
-                    uploadFaceButton.disabled = false;
-                    showToast('Error: ' + error.message, 'danger');
+                    console.error('Error:', error);
+                    alert('An error occurred while registering face');
+                })
+                .finally(() => {
+                    // Hide loading overlay
+                    document.getElementById('camera-overlay').style.display = 'none';
                 });
             });
         }
         
-        // Recognize face button
-        if (recognizeFaceButton) {
-            recognizeFaceButton.addEventListener('click', () => {
+        // Recognize face button (for attendance)
+        const recognizeFaceBtn = document.getElementById('recognize-face');
+        if (recognizeFaceBtn) {
+            recognizeFaceBtn.addEventListener('click', function() {
                 const sessionSelect = document.getElementById('session-select');
                 if (!sessionSelect || !sessionSelect.value) {
-                    showToast('Please select a session first', 'warning');
+                    alert('Please select a session');
                     return;
                 }
                 
-                const sessionId = sessionSelect.value;
                 const blob = webcam.captureForUpload();
-                
                 if (!blob) {
-                    showToast('Please start the camera first', 'warning');
+                    alert('Failed to capture image');
                     return;
                 }
                 
-                // Create form data for recognition
                 const formData = new FormData();
-                formData.append('face_image', blob, 'face.jpg');
-                formData.append('session_id', sessionId);
+                formData.append('face_image', blob, 'webcam.png');
+                formData.append('session_id', sessionSelect.value);
                 
-                // Show loading indicator
-                recognizeFaceButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-                recognizeFaceButton.disabled = true;
+                // Show loading overlay
+                document.getElementById('camera-overlay').style.display = 'flex';
                 
-                // Send for recognition
                 fetch('/recognize_face', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
-                    recognizeFaceButton.innerHTML = 'Recognize Face';
-                    recognizeFaceButton.disabled = false;
-                    
                     if (data.success) {
-                        showToast('Face recognition successful', 'success');
-                        
                         // Display recognition results
                         const resultsContainer = document.getElementById('recognition-results');
-                        if (resultsContainer && data.matches && data.matches.length > 0) {
-                            let resultsHtml = '<div class="alert alert-success mt-3">';
-                            resultsHtml += '<h5>Recognition Results:</h5>';
-                            resultsHtml += '<ul>';
+                        if (resultsContainer) {
+                            let html = '<div class="alert alert-success"><h5>Recognition Results:</h5><ul>';
                             
                             data.matches.forEach(match => {
+                                let status = match.status;
                                 let statusText = '';
-                                let statusClass = '';
                                 
-                                if (match.status === 'marked_present') {
-                                    statusText = 'Attendance marked as present';
-                                    statusClass = 'text-success';
-                                } else if (match.status === 'already_recorded') {
-                                    statusText = 'Attendance already recorded';
-                                    statusClass = 'text-warning';
+                                if (status === 'marked_present') {
+                                    statusText = 'Marked Present';
+                                } else if (status === 'already_recorded') {
+                                    statusText = 'Already Recorded';
                                 }
                                 
-                                resultsHtml += `<li>${match.name} (${match.roll_id}) - <span class="${statusClass}">${statusText}</span></li>`;
+                                html += `<li><strong>${match.name}</strong> (${match.roll_id}) - ${statusText}</li>`;
                             });
                             
-                            resultsHtml += '</ul></div>';
-                            resultsContainer.innerHTML = resultsHtml;
+                            html += '</ul></div>';
+                            resultsContainer.innerHTML = html;
                         }
                     } else {
-                        showToast('Error: ' + data.message, 'danger');
+                        // Display error
+                        const resultsContainer = document.getElementById('recognition-results');
+                        if (resultsContainer) {
+                            resultsContainer.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                        }
                     }
                 })
                 .catch(error => {
-                    recognizeFaceButton.innerHTML = 'Recognize Face';
-                    recognizeFaceButton.disabled = false;
-                    showToast('Error: ' + error.message, 'danger');
+                    console.error('Error:', error);
+                    const resultsContainer = document.getElementById('recognition-results');
+                    if (resultsContainer) {
+                        resultsContainer.innerHTML = '<div class="alert alert-danger">An error occurred during face recognition</div>';
+                    }
+                })
+                .finally(() => {
+                    // Hide loading overlay
+                    document.getElementById('camera-overlay').style.display = 'none';
+                });
+            });
+        }
+        
+        // Handle file input for face registration
+        const faceImageInput = document.getElementById('face-image-input');
+        const facePreview = document.getElementById('face-preview');
+        const uploadFaceFileBtn = document.getElementById('upload-face-file');
+        
+        if (faceImageInput && facePreview && uploadFaceFileBtn) {
+            faceImageInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        facePreview.src = e.target.result;
+                        facePreview.style.display = 'block';
+                        uploadFaceFileBtn.disabled = false;
+                    };
+                    
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+            
+            uploadFaceFileBtn.addEventListener('click', function() {
+                const personId = uploadFaceFileBtn.getAttribute('data-person-id');
+                if (!personId) {
+                    alert('No person ID provided');
+                    return;
+                }
+                
+                if (!faceImageInput.files || !faceImageInput.files[0]) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('face_image', faceImageInput.files[0]);
+                
+                fetch(`/upload_face/${personId}`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update face status badge
+                        const faceStatus = document.getElementById('face-status');
+                        if (faceStatus) {
+                            faceStatus.className = 'badge bg-success';
+                            faceStatus.textContent = 'Registered';
+                        }
+                        
+                        alert('Face registered successfully!');
+                    } else {
+                        alert('Failed to register face: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while registering face');
                 });
             });
         }
