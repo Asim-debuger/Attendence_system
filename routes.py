@@ -63,10 +63,69 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        flash('Your account has been created! You can now log in', 'success')
-        return redirect(url_for('login'))
+        # Instead of redirecting to login, redirect to face registration
+        flash('Your account has been created! Let\'s register your face for attendance', 'success')
+        return redirect(url_for('register_face', user_id=user.id))
     
     return render_template('register.html', form=form)
+
+@app.route('/register_face/<int:user_id>')
+def register_face(user_id):
+    # Make sure the user exists
+    user = User.query.get_or_404(user_id)
+    
+    return render_template('register_face.html', username=user.username, user_id=user_id)
+
+@app.route('/register_face_data', methods=['POST'])
+def register_face_data():
+    data = request.json
+    if not data or 'image_data' not in data or 'user_id' not in data:
+        return jsonify({'success': False, 'error': 'Missing required data'})
+    
+    user_id = data['user_id']
+    image_data = data['image_data']
+    
+    try:
+        # Get user
+        user = User.query.get_or_404(user_id)
+        
+        # Convert base64 to binary
+        image_binary = base64.b64decode(image_data)
+        
+        # Create a Person record for this user
+        person = Person(
+            roll_id=f"USR{user_id}",  # Create a roll ID based on user ID
+            first_name=user.username,  # Use username as name initially
+            last_name="",              # Empty last name
+            email=user.email,          # Set email
+            department="User"          # Default department
+        )
+        
+        db.session.add(person)
+        db.session.commit()
+        
+        # Encode the face
+        encoding, message = encode_face_image(image_binary)
+        
+        if encoding is None:
+            return jsonify({'success': False, 'error': message})
+        
+        # Save the face encoding
+        success, save_message = save_face_encoding(person.id, encoding)
+        
+        if not success:
+            return jsonify({'success': False, 'error': save_message})
+        
+        # Login the user automatically
+        login_user(user)
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Face registered successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error in register_face_data: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error: {str(e)}'})
 
 @app.route('/logout')
 @login_required

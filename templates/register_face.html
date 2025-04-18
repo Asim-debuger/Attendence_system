@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Attendance System | Face Registration</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #ddd;
+        }
+        
+        .camera-feed {
+            width: 100%;
+            display: block;
+        }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast container for notifications -->
+    <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;"></div>
+    
+    <div class="d-flex" id="wrapper">
+        <!-- Page content wrapper -->
+        <div id="page-content-wrapper" class="flex-grow-1">
+            <!-- Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-light mb-4">
+                <div class="container-fluid">
+                    <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Logo" width="40" height="40" class="me-2">
+                        <span class="fs-4 fw-bold">Advanced Attendance System</span>
+                    </a>
+                    
+                    <div class="ms-auto d-flex align-items-center">
+                        <!-- Theme toggle button -->
+                        <div class="theme-toggle rounded-circle me-3" id="theme-toggle" title="Toggle theme">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        
+                        <div>
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-primary me-2">Login</a>
+                            <a href="{{ url_for('register') }}" class="btn btn-primary">Register</a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            
+            <!-- Flash messages -->
+            <div class="container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+            
+            <!-- Main content -->
+            <div class="container py-4">
+                <div class="row justify-content-center">
+                    <div class="col-md-10">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">Face Registration</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-4">
+                                    <h4>Welcome, {{ username }}!</h4>
+                                    <p>Let's register your face for easier attendance tracking</p>
+                                </div>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-lg-8 mx-auto">
+                                        <div class="camera-container mb-3">
+                                            <video id="camera-video" class="camera-feed" autoplay></video>
+                                            <canvas id="camera-canvas" style="display: none;"></canvas>
+                                            <div class="camera-overlay" id="camera-overlay" style="display: none;">
+                                                <div class="text-center">
+                                                    <div class="loading-spinner mb-3"></div>
+                                                    <p>Processing...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="camera-buttons d-flex gap-2 justify-content-center mb-3">
+                                            <button class="btn btn-secondary btn-lg" id="start-camera">
+                                                <i class="fas fa-video me-2"></i> Start Camera
+                                            </button>
+                                            <button class="btn btn-danger btn-lg" id="stop-camera" style="display: none;">
+                                                <i class="fas fa-video-slash me-2"></i> Stop Camera
+                                            </button>
+                                            <button class="btn btn-primary btn-lg" id="capture-face" style="display: none;">
+                                                <i class="fas fa-camera me-2"></i> Capture Face
+                                            </button>
+                                        </div>
+                                        
+                                        <div id="face-preview" class="text-center" style="display: none;">
+                                            <h5 class="mb-3">Captured Image</h5>
+                                            <img id="captured-image" src="" alt="Captured face" class="img-thumbnail mb-3" style="max-height: 200px;">
+                                            <div class="d-flex justify-content-center gap-2">
+                                                <button class="btn btn-secondary" id="retake-photo">
+                                                    <i class="fas fa-redo me-2"></i> Retake
+                                                </button>
+                                                <button class="btn btn-success" id="save-face">
+                                                    <i class="fas fa-save me-2"></i> Save & Continue
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-10 mx-auto">
+                                        <div class="alert alert-info">
+                                            <h5 class="alert-heading"><i class="fas fa-info-circle me-2"></i> Tips for Better Face Recognition</h5>
+                                            <ul class="mb-0">
+                                                <li>Ensure your face is well-lit and clearly visible</li>
+                                                <li>Look directly at the camera</li>
+                                                <li>Remove glasses, hats, or other face-covering items</li>
+                                                <li>Maintain a neutral expression</li>
+                                                <li>Position your face at the center of the frame</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div class="text-center mt-3">
+                                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                                                Skip for Now
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <footer class="mt-5 p-4 text-center text-muted">
+                <p>&copy; 2025 Advanced Attendance System. All rights reserved.</p>
+            </footer>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoElement = document.getElementById('camera-video');
+            const canvasElement = document.getElementById('camera-canvas');
+            const overlayElement = document.getElementById('camera-overlay');
+            const capturedImage = document.getElementById('captured-image');
+            const facePreview = document.getElementById('face-preview');
+            
+            // Buttons
+            const startCameraBtn = document.getElementById('start-camera');
+            const stopCameraBtn = document.getElementById('stop-camera');
+            const captureFaceBtn = document.getElementById('capture-face');
+            const retakePhotoBtn = document.getElementById('retake-photo');
+            const saveFaceBtn = document.getElementById('save-face');
+            
+            let stream = null;
+            
+            // Start camera
+            startCameraBtn.addEventListener('click', async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    });
+                    
+                    videoElement.srcObject = stream;
+                    startCameraBtn.style.display = 'none';
+                    stopCameraBtn.style.display = 'block';
+                    captureFaceBtn.style.display = 'block';
+                    facePreview.style.display = 'none';
+                    
+                    showToast('Camera started successfully', 'success');
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    showToast('Could not access your camera. Please check permissions.', 'danger');
+                }
+            });
+            
+            // Stop camera
+            stopCameraBtn.addEventListener('click', () => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    videoElement.srcObject = null;
+                    startCameraBtn.style.display = 'block';
+                    stopCameraBtn.style.display = 'none';
+                    captureFaceBtn.style.display = 'none';
+                }
+            });
+            
+            // Capture face
+            captureFaceBtn.addEventListener('click', () => {
+                // Set canvas dimensions to match video
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+                
+                // Draw video frame to canvas
+                const context = canvasElement.getContext('2d');
+                context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                
+                // Convert canvas to data URL (base64)
+                const imageData = canvasElement.toDataURL('image/jpeg');
+                capturedImage.src = imageData;
+                
+                // Show preview and hide camera controls
+                facePreview.style.display = 'block';
+                captureFaceBtn.style.display = 'none';
+            });
+            
+            // Retake photo
+            retakePhotoBtn.addEventListener('click', () => {
+                facePreview.style.display = 'none';
+                captureFaceBtn.style.display = 'block';
+            });
+            
+            // Save face and proceed
+            saveFaceBtn.addEventListener('click', async () => {
+                try {
+                    overlayElement.style.display = 'flex';
+                    
+                    // Get image data from canvas (base64, without the prefix)
+                    const imageData = canvasElement.toDataURL('image/jpeg')
+                        .replace('data:image/jpeg;base64,', '');
+                    
+                    // Send image data to server
+                    const response = await fetch('/register_face_data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image_data: imageData,
+                            user_id: {{ user_id }}
+                        }),
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast('Face registered successfully', 'success');
+                        // Redirect to dashboard after a brief delay
+                        setTimeout(() => {
+                            window.location.href = '/dashboard';
+                        }, 1500);
+                    } else {
+                        showToast(result.error || 'Failed to register face', 'danger');
+                        overlayElement.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error saving face data:', error);
+                    showToast('An error occurred while saving your face data', 'danger');
+                    overlayElement.style.display = 'none';
+                }
+            });
+            
+            // Helper for showing toast notifications
+            function showToast(message, type = 'info') {
+                const toastContainer = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-white bg-${type} border-0`;
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+                
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                `;
+                
+                toastContainer.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+                bsToast.show();
+                
+                // Remove toast from DOM after it's hidden
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toastContainer.removeChild(toast);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
