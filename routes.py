@@ -41,7 +41,51 @@ def login():
         else:
             flash('Login unsuccessful. Please check username and password', 'danger')
     
-    return render_template('login.html', form=form)
+    return render_template('login_face.html', form=form)
+
+@app.route('/login_with_face', methods=['POST'])
+def login_with_face():
+    data = request.json
+    if not data or 'image_data' not in data:
+        return jsonify({'success': False, 'error': 'Missing image data'})
+    
+    # Decode the base64 image data
+    try:
+        image_binary = base64.b64decode(data['image_data'])
+        
+        # Recognize the face using our face recognition system
+        matches, message = recognize_face(image_binary)
+        
+        if not matches:
+            return jsonify({'success': False, 'error': 'Face not recognized. Please try again or use username/password login.'})
+        
+        # For our demo, we'll use the first match (in a real system, you might want more complex logic)
+        person_id = matches[0]['person_id']
+        
+        # Look up the person
+        person = Person.query.get(person_id)
+        if not person:
+            return jsonify({'success': False, 'error': 'Person not found in the database.'})
+        
+        # Try to find a user with matching email (since we linked Person email to User email)
+        if person.email:
+            user = User.query.filter_by(email=person.email).first()
+            
+            if user:
+                # Log the user in
+                login_user(user)
+                user.last_login = datetime.utcnow()
+                db.session.commit()
+                
+                # Return success
+                return jsonify({'success': True, 'message': 'Face recognized successfully!'})
+        
+        # If we get here, we didn't find a matching user
+        return jsonify({'success': False, 'error': 'Could not find a user account for this face.'})
+            
+    except Exception as e:
+        logger.error(f"Error in login_with_face: {str(e)}")
+        return jsonify({'success': False, 'error': f'An error occurred: {str(e)}'})
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
