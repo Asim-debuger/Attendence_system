@@ -1,166 +1,307 @@
-{% extends "layout.html" %}
-
-{% block title %}Session Attendance{% endblock %}
-
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3">Session Attendance</h1>
-    <div>
-        <a href="{{ url_for('take_attendance') }}" class="btn btn-primary me-2">
-            <i class="fas fa-camera me-2"></i> Take Attendance
-        </a>
-        <a href="{{ url_for('attendance') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i> Back to Records
-        </a>
-    </div>
-</div>
-
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">{{ session.name }}</h5>
-            <div class="badge bg-light text-dark">
-                {{ session.date.strftime('%Y-%m-%d') }}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Attendance System | Session Attendance</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    
+    <!-- Flatpickr for date picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Toast container for notifications -->
+    <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;"></div>
+    
+    <!-- Page wrapper -->
+    <div class="d-flex" id="wrapper">
+        {% if current_user.is_authenticated %}
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-heading d-flex align-items-center p-3 mb-2">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Logo" width="40" height="40" class="me-2">
+                <span class="fs-4 fw-bold text-primary">Attendance</span>
             </div>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <p><strong>Time:</strong> 
-                    {{ session.start_time.strftime('%H:%M') }} - 
-                    {% if session.end_time %}
-                        {{ session.end_time.strftime('%H:%M') }}
-                    {% else %}
-                        <span class="badge bg-warning text-dark">Ongoing</span>
-                    {% endif %}
-                </p>
+            
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('dashboard') }}" class="sidebar-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('students') }}" class="sidebar-item {% if request.endpoint in ['students', 'add_student', 'edit_student'] %}active{% endif %}">
+                    <i class="fas fa-user-graduate me-2"></i> Students/Employees
+                </a>
+                <a href="{{ url_for('take_attendance') }}" class="sidebar-item {% if request.endpoint == 'take_attendance' %}active{% endif %}">
+                    <i class="fas fa-camera me-2"></i> Take Attendance
+                </a>
+                <a href="{{ url_for('attendance') }}" class="sidebar-item {% if request.endpoint == 'attendance' %}active{% endif %}">
+                    <i class="fas fa-clipboard-list me-2"></i> Attendance Records
+                </a>
+                <a href="{{ url_for('reports') }}" class="sidebar-item {% if request.endpoint == 'reports' %}active{% endif %}">
+                    <i class="fas fa-chart-bar me-2"></i> Reports
+                </a>
+                <a href="{{ url_for('profile') }}" class="sidebar-item {% if request.endpoint == 'profile' %}active{% endif %}">
+                    <i class="fas fa-user-cog me-2"></i> Profile
+                </a>
             </div>
-            <div class="col-md-6">
-                <p><strong>Created by:</strong> {{ session.user.username }}</p>
-            </div>
-        </div>
-        
-        {% if session.notes %}
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i> <strong>Notes:</strong> {{ session.notes }}
         </div>
         {% endif %}
         
-        <!-- Attendance Summary -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h5 class="status-present">Present</h5>
-                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'present')|list|length }}</h2>
+        <!-- Page content wrapper -->
+        <div id="page-content-wrapper" class="flex-grow-1">
+            <!-- Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-light mb-4">
+                <div class="container-fluid">
+                    {% if current_user.is_authenticated %}
+                    <button class="btn btn-link" id="sidebar-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    {% else %}
+                    <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Logo" width="40" height="40" class="me-2">
+                        <span class="fs-4 fw-bold">Advanced Attendance System</span>
+                    </a>
+                    {% endif %}
+                    
+                    <div class="ms-auto d-flex align-items-center">
+                        <!-- Theme toggle button -->
+                        <div class="theme-toggle rounded-circle me-3" id="theme-toggle" title="Toggle theme">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        
+                        {% if current_user.is_authenticated %}
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="d-none d-md-inline me-1">{{ current_user.username }}</span>
+                                <i class="fas fa-user-circle"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user-cog me-2"></i> Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
+                        <div>
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-primary me-2">Login</a>
+                            <a href="{{ url_for('register') }}" class="btn btn-primary">Register</a>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h5 class="status-absent">Absent</h5>
-                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'absent')|list|length }}</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h5 class="status-late">Late</h5>
-                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'late')|list|length }}</h2>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card shadow-sm">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Attendance List</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover datatable">
-                <thead>
-                    <tr>
-                        <th>Roll/Employee ID</th>
-                        <th>Name</th>
-                        <th>Department</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in attendance_data %}
-                    <tr>
-                        <td>{{ item.person.roll_id }}</td>
-                        <td>{{ item.person.full_name }}</td>
-                        <td>{{ item.person.department or '-' }}</td>
-                        <td id="status-{{ item.person.id }}" class="status-{{ item.status }}">
-                            {{ item.status|capitalize }}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-sm btn-success" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'present')">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'absent')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-warning" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'late')">
-                                    <i class="fas fa-clock"></i>
-                                </button>
+            </nav>
+            
+            <!-- Flash messages -->
+            <div class="container-fluid">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="card-footer text-center">
-        <a href="{{ url_for('take_attendance') }}" class="btn btn-primary">
-            <i class="fas fa-camera me-2"></i> Take Attendance with Face Recognition
-        </a>
-    </div>
-</div>
-
-<!-- Attendance Tips -->
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-info text-white">
-                <h5 class="card-title mb-0">Attendance Management Tips</h5>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="text-center mb-3">
-                            <img src="https://images.unsplash.com/photo-1560264418-c4445382edbc" alt="Office meeting" class="img-fluid rounded" style="max-height: 150px;">
-                        </div>
-                        <h5><i class="fas fa-camera text-primary me-2"></i> Face Recognition</h5>
-                        <p>Use the face recognition feature for faster and more accurate attendance marking.</p>
+            
+            <!-- Main content -->
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3">Session Attendance</h1>
+                    <div>
+                        <a href="{{ url_for('take_attendance') }}" class="btn btn-primary me-2">
+                            <i class="fas fa-camera me-2"></i> Take Attendance
+                        </a>
+                        <a href="{{ url_for('attendance') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i> Back to Records
+                        </a>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-center mb-3">
-                            <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74" alt="Data charts" class="img-fluid rounded" style="max-height: 150px;">
+                </div>
+                
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">{{ session.name }}</h5>
+                            <div class="badge bg-light text-dark">
+                                {{ session.date.strftime('%Y-%m-%d') }}
+                            </div>
                         </div>
-                        <h5><i class="fas fa-chart-bar text-success me-2"></i> Reports</h5>
-                        <p>Generate attendance reports to analyze patterns and identify trends over time.</p>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-center mb-3">
-                            <img src="https://images.unsplash.com/photo-1538688423619-a81d3f23454b" alt="Team collaboration" class="img-fluid rounded" style="max-height: 150px;">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <p><strong>Time:</strong> 
+                                    {{ session.start_time.strftime('%H:%M') }} - 
+                                    {% if session.end_time %}
+                                        {{ session.end_time.strftime('%H:%M') }}
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Ongoing</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Created by:</strong> {{ session.user.username }}</p>
+                            </div>
                         </div>
-                        <h5><i class="fas fa-users text-warning me-2"></i> Manual Override</h5>
-                        <p>Use the buttons to manually change attendance status when needed.</p>
+                        
+                        {% if session.notes %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> <strong>Notes:</strong> {{ session.notes }}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Attendance Summary -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h5 class="status-present">Present</h5>
+                                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'present')|list|length }}</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h5 class="status-absent">Absent</h5>
+                                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'absent')|list|length }}</h2>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h5 class="status-late">Late</h5>
+                                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'late')|list|length }}</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Attendance List</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover datatable">
+                                <thead>
+                                    <tr>
+                                        <th>Roll/Employee ID</th>
+                                        <th>Name</th>
+                                        <th>Department</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in attendance_data %}
+                                    <tr>
+                                        <td>{{ item.person.roll_id }}</td>
+                                        <td>{{ item.person.full_name }}</td>
+                                        <td>{{ item.person.department or '-' }}</td>
+                                        <td id="status-{{ item.person.id }}" class="status-{{ item.status }}">
+                                            {{ item.status|capitalize }}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-success" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'present')">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'absent')">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-warning" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'late')">
+                                                    <i class="fas fa-clock"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="{{ url_for('take_attendance') }}" class="btn btn-primary">
+                            <i class="fas fa-camera me-2"></i> Take Attendance with Face Recognition
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Attendance Tips -->
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="card-title mb-0">Attendance Management Tips</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="text-center mb-3">
+                                            <img src="https://images.unsplash.com/photo-1560264418-c4445382edbc" alt="Office meeting" class="img-fluid rounded" style="max-height: 150px;">
+                                        </div>
+                                        <h5><i class="fas fa-camera text-primary me-2"></i> Face Recognition</h5>
+                                        <p>Use the face recognition feature for faster and more accurate attendance marking.</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center mb-3">
+                                            <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74" alt="Data charts" class="img-fluid rounded" style="max-height: 150px;">
+                                        </div>
+                                        <h5><i class="fas fa-chart-bar text-success me-2"></i> Reports</h5>
+                                        <p>Generate attendance reports to analyze patterns and identify trends over time.</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center mb-3">
+                                            <img src="https://images.unsplash.com/photo-1538688423619-a81d3f23454b" alt="Team collaboration" class="img-fluid rounded" style="max-height: 150px;">
+                                        </div>
+                                        <h5><i class="fas fa-users text-warning me-2"></i> Manual Override</h5>
+                                        <p>Use the buttons to manually change attendance status when needed.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Footer -->
+            <footer class="mt-5 p-4 text-center text-muted">
+                <p>&copy; 2025 Advanced Attendance System. All rights reserved.</p>
+            </footer>
         </div>
     </div>
-</div>
-{% endblock %}
+    
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery and DataTables -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
