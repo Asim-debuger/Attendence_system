@@ -3,20 +3,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', currentTheme);
     updateThemeIcon(currentTheme);
-    
+
     // Theme toggle
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', function() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            
+
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             updateThemeIcon(newTheme);
         });
     }
-    
+
     // Sidebar toggle
     const sidebarToggle = document.getElementById('sidebar-toggle');
     if (sidebarToggle) {
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
             sidebar.classList.toggle('collapsed');
         });
     }
-    
+
     // Initialize DataTables
     if ($.fn.DataTable) {
         $('.datatable').DataTable({
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Flatpickr initialization for date inputs
     if (typeof flatpickr !== 'undefined') {
         flatpickr(".datepicker", {
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dateFormat: "Y-m-d"
         });
     }
-    
+
     // Auto-dismiss flash messages
     const flashMessages = document.querySelectorAll('.alert:not(.alert-persistent)');
     flashMessages.forEach(function(message) {
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert.close();
         }, 5000);
     });
-    
+
     // Handle attendance marking buttons
     const markAttendanceBtns = document.querySelectorAll('button[onclick^="markAttendance"]');
     markAttendanceBtns.forEach(function(btn) {
@@ -65,27 +65,27 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const onclick = btn.getAttribute('onclick');
             const params = onclick.match(/markAttendance\((\d+),\s*(\d+),\s*['"](\w+)['"]\)/);
-            
+
             if (params && params.length === 4) {
                 markAttendance(parseInt(params[1]), parseInt(params[2]), params[3]);
             }
         });
     });
-    
+
     // Handle export buttons
     const exportBtns = document.querySelectorAll('.export-btn');
     exportBtns.forEach(function(btn) {
         btn.addEventListener('click', function() {
             const type = btn.getAttribute('data-type');
             const tableData = document.getElementById('report-data-body');
-            
+
             if (tableData && tableData.children.length > 0) {
                 const data = [];
                 const headers = ['Date', 'Roll/Employee ID', 'Name', 'Department', 'Status', 'Time In', 'Time Out'];
-                
+
                 // Add headers
                 data.push(headers);
-                
+
                 // Add rows
                 const rows = tableData.querySelectorAll('tr');
                 rows.forEach(function(row) {
@@ -96,11 +96,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     data.push(rowData);
                 });
-                
+
                 exportReport(data, type);
             }
         });
     });
+
+    // Camera Access (added)
+    const registerButton = document.getElementById('register-button'); // Assumed button ID
+    if (registerButton) {
+        registerButton.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                // ... further processing of the video stream ...  (Add your image capture and registration logic here)
+            } catch (error) {
+                showToast('Camera access denied. Please check your browser settings and ensure camera permissions are enabled. Click the camera icon in the address bar to manage permissions.', 'danger');
+                console.error('Camera access error:', error);
+            }
+        });
+    }
 });
 
 // Update theme icon based on current theme
@@ -120,37 +137,37 @@ function updateThemeIcon(theme) {
 function showToast(message, type = 'info') {
     const toastContainer = document.getElementById('toast-container');
     if (!toastContainer) return;
-    
+
     const toast = document.createElement('div');
     toast.className = `toast bg-${type} text-white`;
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'assertive');
     toast.setAttribute('aria-atomic', 'true');
-    
+
     const toastBody = document.createElement('div');
     toastBody.className = 'toast-body d-flex justify-content-between align-items-center';
-    
+
     const messageSpan = document.createElement('span');
     messageSpan.textContent = message;
-    
+
     const closeButton = document.createElement('button');
     closeButton.type = 'button';
     closeButton.className = 'btn-close btn-close-white ms-auto';
     closeButton.setAttribute('data-bs-dismiss', 'toast');
     closeButton.setAttribute('aria-label', 'Close');
-    
+
     toastBody.appendChild(messageSpan);
     toastBody.appendChild(closeButton);
     toast.appendChild(toastBody);
     toastContainer.appendChild(toast);
-    
+
     const bsToast = new bootstrap.Toast(toast, { 
         autohide: true,
         delay: 5000
     });
-    
+
     bsToast.show();
-    
+
     toast.addEventListener('hidden.bs.toast', function() {
         toast.remove();
     });
@@ -176,7 +193,7 @@ function markAttendance(personId, sessionId, status) {
     formData.append('person_id', personId);
     formData.append('session_id', sessionId);
     formData.append('status', status);
-    
+
     fetch('/mark_attendance', {
         method: 'POST',
         body: formData
@@ -194,7 +211,7 @@ function markAttendance(personId, sessionId, status) {
                 // Update text
                 statusCell.textContent = status.charAt(0).toUpperCase() + status.slice(1);
             }
-            
+
             // Show success message
             showToast('Attendance updated successfully', 'success');
         } else {
@@ -210,15 +227,15 @@ function markAttendance(personId, sessionId, status) {
 // Export report data
 function exportReport(data, type = 'csv') {
     if (!data || !data.length) return;
-    
+
     if (type === 'csv') {
         let csvContent = "data:text/csv;charset=utf-8,";
-        
+
         data.forEach(function(row) {
             let rowContent = row.join(',');
             csvContent += rowContent + "\r\n";
         });
-        
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
