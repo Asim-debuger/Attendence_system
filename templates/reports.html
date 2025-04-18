@@ -1,0 +1,219 @@
+{% extends "layout.html" %}
+
+{% block title %}Attendance Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">Attendance Reports</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Generate Report</h5>
+            </div>
+            <div class="card-body">
+                <form id="report-form" method="POST" action="{{ url_for('generate_report') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="form-group mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        {% if form.start_date.errors %}
+                            {{ form.start_date(class="form-control datepicker is-invalid", id="start_date") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.start_date.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.start_date(class="form-control datepicker", id="start_date") }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        {% if form.end_date.errors %}
+                            {{ form.end_date(class="form-control datepicker is-invalid", id="end_date") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.end_date.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.end_date(class="form-control datepicker", id="end_date") }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <label for="department" class="form-label">Department/Class (Optional)</label>
+                        {% if form.department.errors %}
+                            {{ form.department(class="form-control is-invalid", id="department") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.department.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <select class="form-select" id="department" name="department">
+                                <option value="">All Departments</option>
+                                {% for department in departments %}
+                                <option value="{{ department }}">{{ department }}</option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="button" id="generate-report-btn" class="btn btn-primary btn-lg">
+                            <i class="fas fa-chart-bar me-2"></i> Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">Export Options</h5>
+            </div>
+            <div class="card-body">
+                <p>Export the generated report in your preferred format:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary export-btn" data-type="csv" disabled>
+                        <i class="fas fa-file-csv me-2"></i> Export as CSV
+                    </button>
+                    <button class="btn btn-outline-primary export-btn" data-type="pdf" disabled>
+                        <i class="fas fa-file-pdf me-2"></i> Export as PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div id="report-container" style="display: none;">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Attendance Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div id="report-summary"></div>
+                </div>
+            </div>
+            
+            <div class="row" id="report-charts"></div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Detailed Attendance Records</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Roll/Employee ID</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Status</th>
+                                    <th>Time In</th>
+                                    <th>Time Out</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-data-body">
+                                <!-- Data will be inserted here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Initial state - Report tips -->
+        <div id="report-tips">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f" alt="Data visualization" class="img-fluid rounded" style="max-height: 200px;">
+                    </div>
+                    <h4 class="card-title text-center">Attendance Reports</h4>
+                    <p class="card-text text-center mb-4">
+                        Generate comprehensive attendance reports to analyze patterns and trends. Select a date range and filter by department to view specific data.
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-chart-pie text-primary me-2"></i> Visual Analytics</h5>
+                                    <p class="card-text">View attendance data with intuitive charts and graphs for better analysis.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-file-export text-success me-2"></i> Export Options</h5>
+                                    <p class="card-text">Export reports in various formats for record-keeping and sharing.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-filter text-warning me-2"></i> Filtering</h5>
+                                    <p class="card-text">Filter reports by date range and department for focused analysis.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-search text-info me-2"></i> Detailed Records</h5>
+                                    <p class="card-text">Access detailed attendance records for each student or employee.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date pickers with current date range (current month)
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        // Format dates for input
+        const formatDate = date => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        // Set default date range to current month
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        
+        if (startDateInput && startDateInput.value === '') {
+            startDateInput.value = formatDate(firstDay);
+        }
+        
+        if (endDateInput && endDateInput.value === '') {
+            endDateInput.value = formatDate(today);
+        }
+    });
+</script>
+{% endblock %}

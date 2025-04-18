@@ -1,0 +1,147 @@
+{% extends "layout.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">User Profile</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Profile Information</h5>
+            </div>
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-user-circle fa-5x text-primary"></i>
+                </div>
+                <h5>{{ current_user.username }}</h5>
+                <p class="text-muted mb-1">{{ current_user.email }}</p>
+                <p class="mb-0">
+                    {% if current_user.is_admin %}
+                    <span class="badge bg-danger">Administrator</span>
+                    {% else %}
+                    <span class="badge bg-info">User</span>
+                    {% endif %}
+                </p>
+                <hr>
+                <div class="text-start">
+                    <p><strong>Last Login:</strong> 
+                        {% if current_user.last_login %}
+                        {{ current_user.last_login.strftime('%Y-%m-%d %H:%M:%S') }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </p>
+                    <p><strong>Account Created:</strong> 
+                        {{ current_user.created_at.strftime('%Y-%m-%d') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">Activity</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <img src="https://images.unsplash.com/photo-1573496358773-bdcdbd984982" alt="Professional headshot" class="img-fluid rounded" style="max-height: 180px;">
+                </div>
+                <p class="card-text">
+                    As a member of the Advanced Attendance System, you can manage students/employees, create attendance sessions, and generate reports.
+                </p>
+                <div class="d-grid">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-tachometer-alt me-2"></i> Go to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Update Profile</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_profile') }}">
+                    <div class="form-group mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}">
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h5>Change Password</h5>
+                    <div class="form-group mb-3">
+                        <label for="current_password" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password">
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="new_password" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password">
+                        <div class="form-text text-muted">
+                            Password must be at least 6 characters long
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">Theme Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Choose between light and dark mode for the best viewing experience.
+                        </p>
+                        <div class="d-grid gap-2">
+                            <button id="theme-toggle-light" class="btn btn-outline-primary" onclick="document.documentElement.setAttribute('data-theme', 'light'); localStorage.setItem('theme', 'light'); updateThemeIcon('light');">
+                                <i class="fas fa-sun me-2"></i> Light Mode
+                            </button>
+                            <button id="theme-toggle-dark" class="btn btn-outline-primary" onclick="document.documentElement.setAttribute('data-theme', 'dark'); localStorage.setItem('theme', 'dark'); updateThemeIcon('dark');">
+                                <i class="fas fa-moon me-2"></i> Dark Mode
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">Account Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            Sign out from your current session.
+                        </p>
+                        <div class="d-grid">
+                            <a href="{{ url_for('logout') }}" class="btn btn-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "layout.html" %}
+
+{% block title %}Students/Employees{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">Students/Employees</h1>
+    <a href="{{ url_for('add_student') }}" class="btn btn-primary">
+        <i class="fas fa-user-plus me-2"></i> Add New
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if persons %}
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Roll/Employee ID</th>
+                        <th>Department</th>
+                        <th>Face Data</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for person in persons %}
+                    <tr>
+                        <td>{{ person.id }}</td>
+                        <td>{{ person.full_name }}</td>
+                        <td>{{ person.roll_id }}</td>
+                        <td>{{ person.department or '-' }}</td>
+                        <td>
+                            {% if person.face_encoding %}
+                            <span class="badge bg-success" id="face-status">Registered</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark" id="face-status">Not Registered</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('edit_student', person_id=person.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#faceModal{{ person.id }}">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ person.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Face Registration Modal -->
+                            <div class="modal fade" id="faceModal{{ person.id }}" tabindex="-1" aria-labelledby="faceModalLabel{{ person.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="faceModalLabel{{ person.id }}">Register Face - {{ person.full_name }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="card">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title">Upload Image</h6>
+                                                            <div class="mb-3">
+                                                                <input type="file" class="form-control" id="face-image-input" accept="image/*">
+                                                            </div>
+                                                            <div class="text-center mb-3">
+                                                                <img id="face-preview" class="img-fluid rounded" style="max-height: 200px; display: none;">
+                                                            </div>
+                                                            <div class="d-grid">
+                                                                <button class="btn btn-primary" id="upload-face-file" data-person-id="{{ person.id }}" disabled>
+                                                                    Upload Face
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="card">
+                                                        <div class="card-body">
+                                                            <h6 class="card-title">Use Webcam</h6>
+                                                            <div class="camera-container mb-3">
+                                                                <video id="camera-video" class="camera-feed" autoplay></video>
+                                                                <canvas id="camera-canvas" style="display: none;"></canvas>
+                                                            </div>
+                                                            <div class="d-flex justify-content-center gap-2">
+                                                                <button class="btn btn-secondary" id="start-camera">
+                                                                    <i class="fas fa-video me-2"></i> Start Camera
+                                                                </button>
+                                                                <button class="btn btn-danger" id="stop-camera" style="display: none;">
+                                                                    <i class="fas fa-video-slash me-2"></i> Stop Camera
+                                                                </button>
+                                                                <button class="btn btn-primary" id="upload-face" data-person-id="{{ person.id }}" style="display: none;">
+                                                                    <i class="fas fa-camera me-2"></i> Capture & Upload
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Delete Confirmation Modal -->
+                            <div class="modal fade" id="deleteModal{{ person.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ person.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteModalLabel{{ person.id }}">Confirm Deletion</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete <strong>{{ person.full_name }}</strong>?</p>
+                                            <p class="text-danger">This will also delete all attendance records associated with this person.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{{ url_for('delete_student', person_id=person.id) }}" method="POST">
+                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-4x text-muted mb-3"></i>
+            <h5>No students or employees found</h5>
+            <p>Start by adding your first student or employee.</p>
+            <a href="{{ url_for('add_student') }}" class="btn btn-primary mt-3">
+                <i class="fas fa-user-plus me-2"></i> Add New
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/webcam.js') }}"></script>
+<script src="{{ url_for('static', filename='js/face_detection.js') }}"></script>
+{% endblock %}

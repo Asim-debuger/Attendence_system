@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+
+{% block title %}Session Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">Session Attendance</h1>
+    <div>
+        <a href="{{ url_for('take_attendance') }}" class="btn btn-primary me-2">
+            <i class="fas fa-camera me-2"></i> Take Attendance
+        </a>
+        <a href="{{ url_for('attendance') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Back to Records
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">{{ session.name }}</h5>
+            <div class="badge bg-light text-dark">
+                {{ session.date.strftime('%Y-%m-%d') }}
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>Time:</strong> 
+                    {{ session.start_time.strftime('%H:%M') }} - 
+                    {% if session.end_time %}
+                        {{ session.end_time.strftime('%H:%M') }}
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Ongoing</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Created by:</strong> {{ session.user.username }}</p>
+            </div>
+        </div>
+        
+        {% if session.notes %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i> <strong>Notes:</strong> {{ session.notes }}
+        </div>
+        {% endif %}
+        
+        <!-- Attendance Summary -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="status-present">Present</h5>
+                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'present')|list|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="status-absent">Absent</h5>
+                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'absent')|list|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="status-late">Late</h5>
+                        <h2>{{ attendance_data|selectattr('status', 'equalto', 'late')|list|length }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Attendance List</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>Roll/Employee ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in attendance_data %}
+                    <tr>
+                        <td>{{ item.person.roll_id }}</td>
+                        <td>{{ item.person.full_name }}</td>
+                        <td>{{ item.person.department or '-' }}</td>
+                        <td id="status-{{ item.person.id }}" class="status-{{ item.status }}">
+                            {{ item.status|capitalize }}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-success" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'present')">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'absent')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-warning" onclick="markAttendance({{ item.person.id }}, {{ session.id }}, 'late')">
+                                    <i class="fas fa-clock"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer text-center">
+        <a href="{{ url_for('take_attendance') }}" class="btn btn-primary">
+            <i class="fas fa-camera me-2"></i> Take Attendance with Face Recognition
+        </a>
+    </div>
+</div>
+
+<!-- Attendance Tips -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">Attendance Management Tips</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center mb-3">
+                            <img src="https://images.unsplash.com/photo-1560264418-c4445382edbc" alt="Office meeting" class="img-fluid rounded" style="max-height: 150px;">
+                        </div>
+                        <h5><i class="fas fa-camera text-primary me-2"></i> Face Recognition</h5>
+                        <p>Use the face recognition feature for faster and more accurate attendance marking.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center mb-3">
+                            <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74" alt="Data charts" class="img-fluid rounded" style="max-height: 150px;">
+                        </div>
+                        <h5><i class="fas fa-chart-bar text-success me-2"></i> Reports</h5>
+                        <p>Generate attendance reports to analyze patterns and identify trends over time.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center mb-3">
+                            <img src="https://images.unsplash.com/photo-1538688423619-a81d3f23454b" alt="Team collaboration" class="img-fluid rounded" style="max-height: 150px;">
+                        </div>
+                        <h5><i class="fas fa-users text-warning me-2"></i> Manual Override</h5>
+                        <p>Use the buttons to manually change attendance status when needed.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

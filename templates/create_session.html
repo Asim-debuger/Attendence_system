@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+
+{% block title %}Create Attendance Session{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">Create Attendance Session</h1>
+    <a href="{{ url_for('attendance') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i> Back to Records
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Session Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="form-group mb-3">
+                        <label for="name" class="form-label">Session Name</label>
+                        {% if form.name.errors %}
+                            {{ form.name(class="form-control is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.name(class="form-control", placeholder="e.g. Morning Class, Staff Meeting") }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="date" class="form-label">Date</label>
+                                {% if form.date.errors %}
+                                    {{ form.date(class="form-control datepicker is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.date(class="form-control datepicker") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="start_time" class="form-label">Start Time</label>
+                                {% if form.start_time.errors %}
+                                    {{ form.start_time(class="form-control is-invalid", type="time") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.start_time.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.start_time(class="form-control", type="time") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="end_time" class="form-label">End Time (Optional)</label>
+                                {% if form.end_time.errors %}
+                                    {{ form.end_time(class="form-control is-invalid", type="time") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.end_time.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.end_time(class="form-control", type="time") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <label for="notes" class="form-label">Notes (Optional)</label>
+                        {% if form.notes.errors %}
+                            {{ form.notes(class="form-control is-invalid", rows=3) }}
+                            <div class="invalid-feedback">
+                                {% for error in form.notes.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.notes(class="form-control", rows=3, placeholder="Add any additional information about this session") }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('attendance') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">About Sessions</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <img src="https://images.unsplash.com/photo-1516979187457-637abb4f9353" alt="Classroom" class="img-fluid rounded" style="max-height: 150px;">
+                </div>
+                <p>A session represents a specific time period during which attendance is taken, such as:</p>
+                <ul>
+                    <li>A class or lecture</li>
+                    <li>A staff meeting</li>
+                    <li>A training session</li>
+                    <li>A conference or event</li>
+                </ul>
+                <p>After creating a session, you can take attendance for it using face recognition or manual entry.</p>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Next Steps</h5>
+            </div>
+            <div class="card-body">
+                <p>After creating the session:</p>
+                <ol>
+                    <li>Navigate to "Take Attendance"</li>
+                    <li>Select this session from the dropdown</li>
+                    <li>Use face recognition to mark attendance</li>
+                    <li>Or manually mark attendance from the session details page</li>
+                </ol>
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i> 
+                    Sessions without an end time will be considered "ongoing" until you update them.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date picker with current date as default
+        const dateInput = document.getElementById('date');
+        if (dateInput && dateInput.value === '') {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        }
+        
+        // Initialize time picker with current time as default
+        const startTimeInput = document.getElementById('start_time');
+        if (startTimeInput && startTimeInput.value === '') {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            startTimeInput.value = `${hours}:${minutes}`;
+        }
+    });
+</script>
+{% endblock %}

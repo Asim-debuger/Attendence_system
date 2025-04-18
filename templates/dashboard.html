@@ -1,0 +1,179 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4">Dashboard</h1>
+
+<!-- Store chart data for JavaScript -->
+<div id="chart-data" style="display: none;">{{ daily_stats }}</div>
+
+<!-- Stats cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card shadow-sm stat-card stat-card-primary h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Students/Employees
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold">{{ total_persons }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card shadow-sm stat-card stat-card-success h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Present Today
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold">{{ present_today }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card shadow-sm stat-card stat-card-danger h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Absent Today
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold">{{ absent_today }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card shadow-sm stat-card stat-card-warning h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Late Today
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold">{{ late_today }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Tables -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Weekly Attendance</h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <li><a class="dropdown-item" href="{{ url_for('reports') }}">View Detailed Report</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="attendance-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Sessions</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_sessions %}
+                <div class="list-group">
+                    {% for session in recent_sessions %}
+                    <a href="{{ url_for('session_attendance', session_id=session.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ session.name }}</h6>
+                            <small>{{ session.date.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1 small">
+                            Time: {{ session.start_time.strftime('%H:%M') }} - 
+                            {% if session.end_time %}
+                                {{ session.end_time.strftime('%H:%M') }}
+                            {% else %}
+                                Ongoing
+                            {% endif %}
+                        </p>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                    <p>No recent sessions</p>
+                    <a href="{{ url_for('create_session') }}" class="btn btn-sm btn-primary">Create Session</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('take_attendance') }}" class="btn btn-primary btn-block w-100">
+                            <i class="fas fa-camera me-2"></i> Take Attendance
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('create_session') }}" class="btn btn-success btn-block w-100">
+                            <i class="fas fa-plus me-2"></i> New Session
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('add_student') }}" class="btn btn-info btn-block w-100">
+                            <i class="fas fa-user-plus me-2"></i> Add Student
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('reports') }}" class="btn btn-secondary btn-block w-100">
+                            <i class="fas fa-chart-bar me-2"></i> Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}
