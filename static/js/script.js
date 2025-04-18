@@ -102,19 +102,73 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Camera Access (added)
-    const registerButton = document.getElementById('register-button'); // Assumed button ID
-    if (registerButton) {
-        registerButton.addEventListener('click', async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                video.play();
-                // ... further processing of the video stream ...  (Add your image capture and registration logic here)
-            } catch (error) {
-                showToast('Camera access denied. Please check your browser settings and ensure camera permissions are enabled. Click the camera icon in the address bar to manage permissions.', 'danger');
-                console.error('Camera access error:', error);
+    // Camera Access Handler
+    async function initializeCamera(videoElement) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'user'
+                }
+            });
+            
+            if (videoElement) {
+                videoElement.srcObject = stream;
+                await videoElement.play();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Camera access error:', error);
+            let errorMessage = 'Could not access camera. ';
+            
+            if (error.name === 'NotAllowedError') {
+                errorMessage += 'Please grant camera permissions in your browser settings.';
+            } else if (error.name === 'NotFoundError') {
+                errorMessage += 'No camera device found.';
+            } else if (error.name === 'NotReadableError') {
+                errorMessage += 'Camera is already in use by another application.';
+            } else {
+                errorMessage += 'Please check your camera connection and permissions.';
+            }
+            
+            if (typeof showToast === 'function') {
+                showToast(errorMessage, 'danger');
+            } else {
+                alert(errorMessage);
+            }
+            return false;
+        }
+    }
+
+    // Initialize camera when start button is clicked
+    const startCameraBtn = document.getElementById('start-camera');
+    const stopCameraBtn = document.getElementById('stop-camera');
+    const captureFaceBtn = document.getElementById('capture-face');
+    const videoElement = document.getElementById('camera-video');
+
+    if (startCameraBtn && videoElement) {
+        startCameraBtn.addEventListener('click', async () => {
+            const success = await initializeCamera(videoElement);
+            if (success) {
+                startCameraBtn.style.display = 'none';
+                if (stopCameraBtn) stopCameraBtn.style.display = 'block';
+                if (captureFaceBtn) captureFaceBtn.style.display = 'block';
+            }
+        });
+    }
+
+    // Stop camera functionality
+    if (stopCameraBtn && videoElement) {
+        stopCameraBtn.addEventListener('click', () => {
+            const stream = videoElement.srcObject;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+                startCameraBtn.style.display = 'block';
+                stopCameraBtn.style.display = 'none';
+                if (captureFaceBtn) captureFaceBtn.style.display = 'none';
             }
         });
     }

@@ -133,15 +133,19 @@
                                         </div>
 
                                         <div class="camera-buttons d-flex gap-2 justify-content-center mb-3">
-                                            <button class="btn btn-secondary btn-lg" id="start-camera">
+                                            <button class="btn btn-secondary btn-lg" id="start-camera" type="button">
                                                 <i class="fas fa-video me-2"></i> Start Camera
                                             </button>
-                                            <button class="btn btn-danger btn-lg" id="stop-camera" style="display: none;">
+                                            <button class="btn btn-danger btn-lg" id="stop-camera" type="button" style="display: none;">
                                                 <i class="fas fa-video-slash me-2"></i> Stop Camera
                                             </button>
-                                            <button class="btn btn-primary btn-lg" id="capture-face" style="display: none;">
+                                            <button class="btn btn-primary btn-lg" id="capture-face" type="button" style="display: none;">
                                                 <i class="fas fa-camera me-2"></i> Capture Face
                                             </button>
+                                        </div>
+                                        <div id="camera-error" class="alert alert-danger" style="display: none;">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <span id="camera-error-message"></span>
                                         </div>
 
                                         <div id="face-preview" class="text-center" style="display: none;">
@@ -216,6 +220,8 @@
             const overlayElement = document.getElementById('camera-overlay');
             const capturedImage = document.getElementById('captured-image');
             const facePreview = document.getElementById('face-preview');
+            const cameraError = document.getElementById('camera-error');
+            const cameraErrorMessage = document.getElementById('camera-error-message');
 
             // Buttons
             const startCameraBtn = document.getElementById('start-camera');
@@ -242,10 +248,13 @@
                     stopCameraBtn.style.display = 'block';
                     captureFaceBtn.style.display = 'block';
                     facePreview.style.display = 'none';
+                    cameraError.style.display = 'none'; // Hide any previous errors
 
                     showToast('Camera started successfully', 'success');
                 } catch (error) {
                     console.error('Error accessing camera:', error);
+                    cameraErrorMessage.textContent = error.message || 'Could not access your camera. Please check permissions.';
+                    cameraError.style.display = 'block';
                     showToast('Could not access your camera. Please check permissions.', 'danger');
                 }
             });
@@ -258,6 +267,7 @@
                     startCameraBtn.style.display = 'block';
                     stopCameraBtn.style.display = 'none';
                     captureFaceBtn.style.display = 'none';
+                    cameraError.style.display = 'none'; //Hide error message if camera is stopped.
                 }
             });
 
