@@ -104,7 +104,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Camera Access Handler
     async function initializeCamera(videoElement) {
+        if (!videoElement) {
+            console.error('Video element not found');
+            return false;
+        }
+
         try {
+            // Check if browser supports getUserMedia
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Your browser does not support camera access');
+            }
+
+            // Request camera permissions
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     width: { ideal: 640 },
@@ -189,8 +200,16 @@ function updateThemeIcon(theme) {
 
 // Show toast notification
 function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) return;
+    let toastContainer = document.getElementById('toast-container');
+    
+    // Create toast container if it doesn't exist
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+        toastContainer.style.zIndex = '1050';
+        document.body.appendChild(toastContainer);
+    }
 
     const toast = document.createElement('div');
     toast.className = `toast bg-${type} text-white`;
