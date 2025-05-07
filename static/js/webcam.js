@@ -299,3 +299,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+///////////// //////////////////////////////////////
+const videoElement = document.getElementById('webcam');
+const startCameraButton = document.getElementById('startCamera');
+const captureButton = document.getElementById('capture');
+const canvas = document.getElementById('canvas');
+const uploadButton = document.getElementById('uploadButton');
+
+startCameraButton.addEventListener('click', async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    videoElement.srcObject = stream;
+});
+
+captureButton.addEventListener('click', () => {
+    const context = canvas.getContext('2d');
+    canvas.width = videoElement.videoWidth;
+    canvas.height = videoElement.videoHeight;
+    context.drawImage(videoElement, 0, 0);
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // Here you would send the dataUrl image to the server for registration
+    console.log(dataUrl);
+});
+
+uploadButton.addEventListener('click', () => {
+    const fileInput = document.getElementById('imageUpload');
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+        // Here you would send the uploaded file to the server for registration
+        console.log(reader.result);
+    }
+    
+    if (file) {
+        reader.readAsDataURL(file);
+    }
+}); 
