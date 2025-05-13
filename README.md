@@ -1,0 +1,1 @@
+https://www.linkedin.com/posts/asim-kumar-pal-537453330_introducing-advanced-attendance-management-activity-7327968677692137472-9t6T?utm_source=social_share_send&utm_medium=android_app&rcm=ACoAAFNcHDsBPFB3bbHIFYg23JzApdKslv62GCg&utm_campaign=copy_link
